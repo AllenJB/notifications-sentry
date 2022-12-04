@@ -1,0 +1,45 @@
+{
+    "name": "allenjb/notifications-sentry",
+    "type": "library",
+    "description": "Sentry service for the allenjb/notifications library",
+    "keywords": [
+        "AllenJB",
+        "Notifications",
+        "Sentry",
+        "error",
+        "reporting"
+    ],
+    "homepage": "https://github.com/AllenJB/Notifications",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "AllenJB",
+            "homepage": "https://github.com/AllenJB",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^7.4|^8.0",
+        "ext-json": "*",
+        "allenjb/notifications": "v4.x-dev",
+        "php-http/guzzle7-adapter": "^1.0",
+        "sentry/sentry": "^3.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "AllenJB\\Notifications\\Services\\": "src"
+        }
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.9",
+        "phpstan/phpstan-strict-rules": "^1.4",
+        "phpcompatibility/php-compatibility": "^9.3",
+        "dealerdirect/phpcodesniffer-composer-installer": "^0.7.2",
+        "php-parallel-lint/php-parallel-lint": "^1.3"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}
