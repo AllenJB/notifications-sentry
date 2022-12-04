@@ -76,7 +76,11 @@ class Sentry implements LoggingServiceInterface
             'attach_stacktrace' => true,
         ];
         init($sentryOptions);
-        $this->client = SentrySdk::getCurrentHub()->getClient();
+        $sentryClient = SentrySdk::getCurrentHub()->getClient();
+        if ($sentryClient === null) {
+            throw new \UnexpectedValueException("Failed to retrieve Sentry Client via CurrentHub");
+        }
+        $this->client = $sentryClient;
 
         foreach ($globalTags as $key => $value) {
             if ($key === "") {
