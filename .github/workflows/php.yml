@@ -2,6 +2,7 @@ name: PHP
 on:
     push:
         branches:
+            - main
             - master
             - v1
             - v4
