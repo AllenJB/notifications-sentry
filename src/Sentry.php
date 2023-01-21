@@ -4,11 +4,16 @@ namespace AllenJB\Notifications\Services;
 
 use AllenJB\Notifications\LoggingServiceInterface;
 use AllenJB\Notifications\Notification;
+use Sentry\Client;
 use Sentry\ClientInterface;
 use Sentry\Event;
 use Sentry\EventHint;
 use Sentry\ExceptionDataBag;
 use Sentry\ExceptionMechanism;
+use Sentry\Integration\EnvironmentIntegration;
+use Sentry\Integration\FrameContextifierIntegration;
+use Sentry\Integration\RequestIntegration;
+use Sentry\Integration\TransactionIntegration;
 use Sentry\SentrySdk;
 use Sentry\Severity;
 use Sentry\State\Scope;
@@ -39,18 +44,6 @@ class Sentry implements LoggingServiceInterface
     protected array $globalTags;
 
 
-    public static function getInstance(): ?self
-    {
-        return static::$instance;
-    }
-
-
-    public static function setInstance(self $instance): void
-    {
-        static::$instance = $instance;
-    }
-
-
     /**
      * @param array<string, string> $globalTags
      */
@@ -59,29 +52,29 @@ class Sentry implements LoggingServiceInterface
         string $appEnvironment,
         ?string $appVersion,
         array $globalTags,
-        ?string $publicDSN = null
+        ?string $publicDSN = null,
+        ?Client $sentryClient = null
     ) {
         $this->appEnvironment = $appEnvironment;
         $this->appVersion = $appVersion;
         $this->publicDSN = $publicDSN;
 
-        $globalTags['sapi'] = PHP_SAPI;
-
-        $sentryOptions = [
-            'release' => $appVersion,
-            'environment' => $appEnvironment,
-            'dsn' => $sentryDSN,
-            'max_value_length' => 4096,
-            'send_default_pii' => true,
-            'attach_stacktrace' => true,
-        ];
-        init($sentryOptions);
-        $sentryClient = SentrySdk::getCurrentHub()->getClient();
         if ($sentryClient === null) {
-            throw new \UnexpectedValueException("Failed to retrieve Sentry Client via CurrentHub");
+            init(self::getSentryClientDefaultOptions($sentryDSN, $appEnvironment, $appVersion));
+            $sentryClient = SentrySdk::getCurrentHub()->getClient();
+            if ($sentryClient === null) {
+                throw new \UnexpectedValueException("Failed to retrieve Sentry Client via CurrentHub");
+            }
         }
         $this->client = $sentryClient;
 
+        $this->setupGlobalTags($globalTags);
+    }
+
+
+    protected function setupGlobalTags(array $globalTags): void
+    {
+        $globalTags['sapi'] = PHP_SAPI;
         foreach ($globalTags as $key => $value) {
             if ($key === "") {
                 throw new \InvalidArgumentException("Tag key cannot be an empty string");
@@ -94,6 +87,32 @@ class Sentry implements LoggingServiceInterface
         configureScope(function (Scope $scope) use ($globalTags): void {
             $scope->setTags($globalTags);
         });
+    }
+
+
+    public static function getSentryClientDefaultOptions(
+        string $sentryDSN,
+        string $appEnvironment,
+        ?string $appVersion
+    ): array {
+        return [
+            'release' => $appVersion,
+            'environment' => $appEnvironment,
+            'dsn' => $sentryDSN,
+            'max_value_length' => 4096,
+            'send_default_pii' => true,
+            'attach_stacktrace' => true,
+            'default_integrations' => false,
+            'integrations' => [
+                // List of integrations from Sentry\Integration\IntegrationRegistry::getDefaultIntegrations()
+                // Minus ModulesIntegration (because it's unnecessary spam)
+                // and the error handler / shutdown handler overrides
+                new RequestIntegration(),
+                new TransactionIntegration(),
+                new FrameContextifierIntegration(),
+                new EnvironmentIntegration(),
+            ],
+        ];
     }
 
 
@@ -222,7 +241,16 @@ class Sentry implements LoggingServiceInterface
     }
 
 
+    /**
+     * @deprecated
+     */
     public function getBrowseJSConfig(): \stdClass
+    {
+        return $this->getBrowserJSConfig();
+    }
+
+
+    public function getBrowserJSConfig(): \stdClass
     {
         $retval = (object) [
             "release" => $this->appVersion,
