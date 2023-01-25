@@ -72,6 +72,9 @@ class Sentry implements LoggingServiceInterface
     }
 
 
+    /**
+     * @param array<string, string> $globalTags
+     */
     protected function setupGlobalTags(array $globalTags): void
     {
         $globalTags['sapi'] = PHP_SAPI;
@@ -90,6 +93,9 @@ class Sentry implements LoggingServiceInterface
     }
 
 
+    /**
+     * @return array<string, mixed>
+     */
     public static function getSentryClientDefaultOptions(
         string $sentryDSN,
         string $appEnvironment,
